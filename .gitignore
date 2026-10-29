@@ -1,0 +1,13 @@
+node_modules
+.vercel
+dist
+.grok
+data
+screenshots
+artifacts
+.env
+.env.*
+*.log
+.node_modules.lock
+.DS_Store
+public/models/*.glb
