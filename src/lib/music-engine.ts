@@ -137,6 +137,67 @@ function drum(
   src.stop(time + 0.2);
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+/** Lê um pedido em texto e sugere os controles. Os sliders continuam editáveis. */
+export function interpretPrompt(text: string): Partial<MusicSettings> {
+  const raw = text.trim();
+  if (!raw) return {};
+  const t = raw.toLowerCase();
+  const out: Partial<MusicSettings> = {};
+
+  if (/lo-?fi|chill|estudo|caf[eé]|jazz|vinil/.test(t)) out.genre = "lofi";
+  else if (/ambient|ambiente|natureza|medita|drone|espa[cç]o/.test(t)) out.genre = "ambiente";
+  else if (/cinema|epico|épico|trilha|filme|suspense|orquestra/.test(t)) out.genre = "cinema";
+  else if (/eletr|techno|dance|festa|synth|house|batida/.test(t)) out.genre = "eletronico";
+  else if (/piano|classico|clássico|solo|noturno/.test(t)) out.genre = "piano";
+
+  const bpmMatch = t.match(/(\d{2,3})\s*bpm/);
+  if (bpmMatch) out.bpm = clamp(Number(bpmMatch[1]), 68, 140);
+  else if (/lent|slow|calmo|suave|devagar/.test(t)) out.bpm = 74;
+  else if (/rápid|rapid|fast|agitad|aceler/.test(t)) out.bpm = 126;
+
+  const secMatch = t.match(/(\d{1,3})\s*(?:s\b|seg)/);
+  const minMatch = t.match(/(\d)\s*min/);
+  if (secMatch) out.seconds = clamp(Number(secMatch[1]), 8, 60);
+  else if (minMatch) out.seconds = clamp(Number(minMatch[1]) * 60, 8, 60);
+
+  if (/intensa|agress|pesad|forte|cheia/.test(t)) out.energy = 84;
+  else if (/suave|leve|calma|calmo|delicad|baixa/.test(t)) out.energy = 28;
+
+  if (/brilh|agud|clar|cristal/.test(t)) out.brightness = 84;
+  else if (/escura|grave|sombri|abaf|morn/.test(t)) out.brightness = 26;
+
+  const note = t.match(/(?:^|[^a-záéíóúâêôãõ])(?:tom|em)\s+(dó|do|ré|re|mi|fá|fa|sol|lá|la|[cdefga])(?![a-záéíóúâêôãõ])/);
+  if (note) {
+    const map: Record<string, MusicSettings["root"]> = {
+      c: "C",
+      dó: "C",
+      do: "C",
+      d: "D",
+      ré: "D",
+      re: "D",
+      e: "E",
+      mi: "E",
+      f: "F",
+      fá: "F",
+      fa: "F",
+      g: "G",
+      sol: "G",
+      a: "A",
+      lá: "A",
+      la: "A",
+    };
+    const root = map[note[1]];
+    if (root) out.root = root;
+  }
+
+  let hash = 2166136261;
+  for (let i = 0; i < raw.length; i += 1) hash = Math.imul(hash ^ raw.charCodeAt(i), 16777619);
+  out.seed = (hash >>> 0) % 9998 + 1;
+  return out;
+}
+
 export async function renderTrack(settings: MusicSettings): Promise<AudioBuffer> {
   const genre = GENRES[settings.genre];
   const seconds = Math.min(60, Math.max(8, settings.seconds));

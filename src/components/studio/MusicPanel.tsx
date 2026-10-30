@@ -4,6 +4,7 @@ import { downloadBlob } from "@/lib/download";
 import {
   audioBufferToMp3,
   audioBufferToWav,
+  interpretPrompt,
   renderTrack,
   type GenreId,
   type MusicSettings,
@@ -27,10 +28,22 @@ export function MusicPanel() {
   const [energy, setEnergy] = useState(55);
   const [brightness, setBrightness] = useState(60);
   const [seed, setSeed] = useState(7);
+  const [prompt, setPrompt] = useState("lo-fi lento para estudar, tom lá, 30 segundos");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [url, setUrl] = useState("");
   const [buffer, setBuffer] = useState<AudioBuffer | null>(null);
+
+  function applyPrompt() {
+    const next = interpretPrompt(prompt);
+    if (next.genre) setGenre(next.genre);
+    if (next.bpm) setBpm(next.bpm);
+    if (next.seconds) setSeconds(next.seconds);
+    if (next.root) setRoot(next.root);
+    if (next.energy != null) setEnergy(next.energy);
+    if (next.brightness != null) setBrightness(next.brightness);
+    if (next.seed) setSeed(next.seed);
+  }
 
   async function compose() {
     setBusy("Compondo…");
@@ -65,9 +78,24 @@ export function MusicPanel() {
     <div className="mx-auto max-w-3xl">
       <PanelHeader
         kicker="Música"
-        title="Texto vira arranjo. Você manda no clima."
-        text="A faixa é composta neste aparelho: gênero, andamento, tom, energia e duração. Dá para ouvir, baixar WAV na hora e MP3 em seguida."
+        title="Descreva a faixa. Depois ajuste cada controle."
+        text="Escreva o clima em texto. O app traduz para gênero, andamento, tom, energia e duração — e você ainda edita cada slider antes de compor. A faixa sai neste aparelho, em WAV e MP3."
       />
+      <Field label="Como você quer a música">
+        <textarea
+          className={inputClass}
+          rows={3}
+          maxLength={280}
+          value={prompt}
+          onChange={(event) => setPrompt(event.target.value)}
+          placeholder="Ex.: piano calmo em ré, brilhante, 45 segundos"
+        />
+      </Field>
+      <div className="mt-3 mb-5">
+        <button type="button" className={btnGhost} onClick={applyPrompt} disabled={!prompt.trim()}>
+          Aplicar texto nos controles
+        </button>
+      </div>
       <div className="mb-5 flex flex-wrap gap-2">
         {GENRES.map((item) => (
           <button
